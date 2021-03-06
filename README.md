@@ -101,14 +101,26 @@ And apply the changes (last manual apply):
 $ docker run --rm -v $(pwd)/argocd_deploy:/app/manifests k8s.gcr.io/kustomize/kustomize:v3.10.0 build manifests | kubectl apply -f -
 ```
 
-With this change, we 
+With this change, ArgoCD is now managing itself using the definition in our repository.
+Verify on ArgoCD interface that a new application has been installed and is working
 
-Verify on ArgoCD interface
 ### Test - ArgoCD upgrade
+
+But... Will it actually work?
+
+To test it out we will let ArgoCD upgrate itself!
+The installed version is v1.8.6 but v1.8.7 is out... let's upgrade!
+
+Have a look at the `argocd_deploy/kustomization.yaml` file... Can you figure out how to do it?
+
+Apply the change by committing and pushing to `master`, no need to use the docker command line anymore.
+After a couple of minutes you should see the new version deployed!
 
 ******
 
 ## Monitoring? Let's do it!
+
+
 
 * `kubectl get secret --namespace monitoring kube-prometheus-stack-grafana
   -o jsonpath="{.data.admin-password}" | base64 --decode ; echo`
