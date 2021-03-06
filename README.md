@@ -6,11 +6,15 @@
 
 ### Create K8s cluster
 
+Use [kind](https://github.com/kubernetes-sigs/kind) to start a new local cluster
+
 ```
 $ kind create cluster --image=kindest/node:v1.19.7
 ```
 
 ### Install ArgoCD
+
+Now that the cluster is up and running, let's build the manifests of ArgoCD using kustomize and apply them.
 
 ```
 $ docker run --rm -v $(pwd)/argocd_deploy:/app/manifests k8s.gcr.io/kustomize/kustomize:v3.10.0 build manifests | kubectl apply -f -
@@ -120,9 +124,39 @@ After a couple of minutes you should see the new version deployed!
 
 ## Monitoring? Let's do it!
 
+In the next example, we are going to use Helm instead of Kustomize to install our monitoring stack.
+Have a look at the manifests in the `app_kube-prometheus-stack` folder, you should recognize the classic Helm structure
 
+To install the monitoring stack we need to:
 
-* `kubectl get secret --namespace monitoring kube-prometheus-stack-grafana
-  -o jsonpath="{.data.admin-password}" | base64 --decode ; echo`
-* `k port-forward -n monitoring svc/kube-prometheus-stack-grafana 10000:80`
+* Modify `argocd_deploy/apps/kube_prometheus_stack.yaml`
+* Include it in the kustomization resources:
+
+```
+resources:
+- resources/namespace.yaml
+- apps/argocd.yaml
+- apps/kube_prometheus_stack.yaml
+```
+* Apply the changes by committing and pushing
+
+Kube-prometheus-stack is now being installed. You can follow the progress with:
+
+```
+$ kubectl get po -n monitoring -w
+```
+
+### Visualize grafana dashboard
+
+Set up port-forward to grafana:
+
+```
+$ kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 10000:80
+```
+
+Get admin password:
+
+```
+$ kubectl get secret --namespace monitoring kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+```
 
