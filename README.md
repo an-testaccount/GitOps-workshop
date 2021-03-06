@@ -1,50 +1,114 @@
-# Kubernetes-GitOps
+# Kubernetes GitOps Workshop
 
-###############################################################################
-# Initial setup
-###############################################################################
+******
 
-## Create K8s cluster
+## Setup
 
-* `kind create cluster --image=kindest/node:v1.19.7`
+### Create K8s cluster
 
-## Install ArgoCD version 1.8.5
+```
+$ kind create cluster --image=kindest/node:v1.19.7
+```
 
-* `k apply -f 0_ns_argocd.yml`
-* `k apply -n argocd -f 1_argocd.yml`
+### Install ArgoCD
 
-### Wait some time, argocd needs to be installed
-### Check with `k get po -A`
+```
+$ docker run --rm -v $(pwd)/argocd_deploy:/app/manifests k8s.gcr.io/kustomize/kustomize:v3.10.0 build manifests | kubectl apply -f -
+```
 
-## Login web interface
+ArgoCD is now being installed. You can follow the progress with:
+
+```
+$ kubectl get po -n argocd -w
+```
+
+Take this time to have a look a the resources in the `GitOps-workshop/argocd_deploy` folder.
+You will find some commented lines and files, we will use them in the next steps.
+
+### Login web interface
 
 * `kubectl port-forward svc/argocd-server -n argocd 8080:443`
 * `kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | cut -d'/' -f 2` # Get admin password
-* Login on localhost:8080 with admin:$prevPassword
+* Login on localhost:8080 with username "admin" and password from previous step
 
-## Login CLI
+### Login CLI (optional)
 
 * `argocd login localhost:8080`
 
-## Add running cluster to ArgoCD
+******
 
-* `argocd cluster add kind-kind --in-cluster`
+## Manage ArgoCD ... with ArgoCD!
 
-###############################################################################
-# Monitoring
-###############################################################################
+It is possible to let ArgoCD manage itself! This is actually the recommended way of deploying ArgoCD, as described in the [docs](https://argoproj.github.io/argo-cd/operator-manual/declarative-setup/#manage-argo-cd-using-argo-cd).
 
-* `argocd app create kube-prometheus-stack --repo
-  https://github.com/AndreaGiardini/GitOps-workshop.git --path
-  app_kube-prometheus-stack --dest-server https://kubernetes.default.svc
-  --dest-namespace monitoring --values values.yaml --sync-option
-  CreateNamespace=true`
+### Installing Tools
 
-* `argocd app sync kube-prometheus-stack`
+ArgoCD supports several ways of generating Kubernetes manifests.
+Defining manifests is supported using different [Tools](https://argoproj.github.io/argo-cd/user-guide/application_sources/).
 
-###############################################################################
-# Grafana password & access
-###############################################################################
+ArgoCD is very unopinionated and leaves the operator total freedom regarding
+which tool to use to generate manifests. We will see:
+
+* Kustomize
+* Helm
+* Plain YAML
+
+#### Kustomize
+
+In the previous step, we installed ArgoCD manually using [Kustomize](https://github.com/kubernetes-sigs/kustomize).
+In order to let ArgoCD manage itself, we need to make sure that it is able to run Kustomize
+
+Open the `argocd_deploy/kustomization.yaml` file and uncomment the following section:
+
+```
+#patchesStrategicMerge:
+#- overlays/argocd-cm.yaml
+#- overlays/argocd-repo-server-deploy.yaml
+```
+
+After applying this change:
+* Kustomize will be downloaded on boot
+* ArgoCD will allow us to use it in our manifests
+
+Apply the changes to the ArgoCD deployment by running:
+
+```
+$ docker run --rm -v $(pwd)/argocd_deploy:/app/manifests k8s.gcr.io/kustomize/kustomize:v3.10.0 build manifests | kubectl apply -f -
+```
+
+At this point, Kustomize is installed in our ArgoCD instance and ready to be used.
+ArgoCD tools are useful also to test upgrades.
+
+### Add ArgoCD to the managed applications
+
+All the tools needed are now installed and we are ready to let ArgoCD manage itself.
+Whenever possible we should define our applications in a declarative way, the same applies for ArgoCD
+
+Find the ArgoCD definition at `argocd_deploy/apps/argocd.yaml`
+Take some time to have a look at the file and replace the fields that need to be edited.
+
+When you're done, uncomment this section from `argocd_deploy/kustomization.yaml`:
+
+```
+resources:
+- resources/namespace.yaml
+- apps/argocd.yaml
+```
+
+And apply the changes (last manual apply):
+
+```
+$ docker run --rm -v $(pwd)/argocd_deploy:/app/manifests k8s.gcr.io/kustomize/kustomize:v3.10.0 build manifests | kubectl apply -f -
+```
+
+With this change, we 
+
+Verify on ArgoCD interface
+### Test - ArgoCD upgrade
+
+******
+
+## Monitoring? Let's do it!
 
 * `kubectl get secret --namespace monitoring kube-prometheus-stack-grafana
   -o jsonpath="{.data.admin-password}" | base64 --decode ; echo`
