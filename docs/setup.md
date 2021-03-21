@@ -38,7 +38,7 @@ Let's then verify that everything is up and running by accessing the web interfa
 * Port forward to the Argo CD server. This will bing your local port to ArgoCD  
   `$ kubectl port-forward svc/argocd-server -n argocd 8080:443`
 * Get the auto-generated password for the 'admin' user  
-  `$ kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | cut -d'/' -f 2` # Get admin password
+  `$ kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o name | cut -d'/' -f 2`
 * Login on [localhost:8080](http://localhost:8080) with username 'admin' and password from previous step
 
 ## Login CLI (optional)

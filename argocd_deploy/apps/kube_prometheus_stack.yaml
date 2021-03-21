@@ -12,12 +12,12 @@ spec:
     repoURL: https://github.com/AndreaGiardini/GitOps-workshop.git # REPLACE ME!
     targetRevision: HEAD
     path: app_kube-prometheus-stack
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: monitoring
     helm:
       valueFiles:
         - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true
